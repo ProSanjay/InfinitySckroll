@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Infinite Scroll Posts</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        .post { border: 1px solid #ccc; margin-bottom: 1em; padding: 1em; }
+        .comments { margin-top: 0.5em; padding-left: 1em; }
+        .comment { font-size: 0.95em; color: #555; margin-bottom: 0.3em; }
+    </style>
+</head>
+<body>
+    <h1>Posts (Infinite Scroll)</h1>
+    <div id="posts"></div>
+    <div id="loading" style="display:none;">Loading...</div>
+    <script>
+        let nextUrl = 'http://127.0.0.1:8000/api/posts/';
+        let loading = false;
+
+        async function loadPosts() {
+            if (!nextUrl || loading) return;
+            loading = true;
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const response = await fetch(nextUrl);
+                const data = await response.json();
+                nextUrl = data.next;
+                appendPosts(data.results);
+            } catch (e) {
+                console.error('Error loading posts', e);
+            }
+            document.getElementById('loading').style.display = 'none';
+            loading = false;
+        }
+
+        function appendPosts(posts) {
+            const container = document.getElementById('posts');
+            posts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.className = 'post';
+                postDiv.innerHTML = `
+                    <strong>${post.author}</strong> <em>${new Date(post.timestamp).toLocaleString()}</em>
+                    <p>${post.text}</p>
+                    <div>Comments (${post.comment_count}):</div>
+                    <div class="comments">
+                        ${post.comments.map(c => `
+                            <div class="comment">
+                                <strong>${c.author}</strong> <em>${new Date(c.timestamp).toLocaleString()}</em>: ${c.text}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(postDiv);
+            });
+        }
+
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+                loadPosts();
+            }
+        });
+
+        // Initial load
+        loadPosts();
+    </script>
+</body>
+</html>
